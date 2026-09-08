@@ -1,0 +1,85 @@
+<!doctype html>
+<!-- Verification fixture for the video workbench fullscreen acceptance.
+     It mirrors the host-side contract of VideoPanel: a panel root whose
+     data-fullscreen attribute tracks the document fullscreen state, a chrome
+     button that toggles it with the same request/exit + rejection-resync
+     wiring, and the studio iframe with the exact permission attributes the
+     DSH host sets (allow="fullscreen" + legacy allowFullScreen). The studio
+     URL itself comes from the REAL built project chunk, imported below. -->
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <title>视频工作台</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #panel-root { display: flex; flex-direction: column; height: 100%; background: #0c0c0d; color: #f8fafc; font: 14px system-ui, sans-serif; }
+    #chrome { display: flex; height: 36px; align-items: center; justify-content: flex-end; padding: 0 8px; flex: none; }
+    #studio-frame-slot { position: relative; flex: 1; display: flex; gap: 8px; padding: 8px; min-height: 0; }
+    iframe { width: 50%; height: 100%; border: 1px solid #27272a; background: #fff; }
+    button { height: 28px; min-width: 28px; }
+    #fullscreen-btn.low-res { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="panel-root" data-testid="video-panel" data-fullscreen="false">
+    <div id="chrome" data-testid="video-studio-chrome">
+      <button id="fullscreen-btn" type="button" data-testid="video-studio-fullscreen"
+        aria-label="全屏" aria-pressed="false" title="全屏">⛶</button>
+    </div>
+    <div id="studio-frame-slot">
+      <!-- Same attributes the DSH host iframe uses: the modern Permissions
+           Policy token plus the legacy attribute older Safari requires. -->
+      <iframe id="frame-granted" title="granted" allow="fullscreen" allowFullScreen
+        sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"></iframe>
+      <!-- Negative control: identical sandbox, no fullscreen delegation. -->
+      <iframe id="frame-denied" title="denied"
+        sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"></iframe>
+    </div>
+  </div>
+  <script type="module">
+    const root = document.getElementById("panel-root");
+    const button = document.getElementById("fullscreen-btn");
+    const params = new URLSearchParams(location.search);
+    const innerOrigin = params.get("innerOrigin");
+    const browserHost = params.get("browserHost") || location.hostname;
+    document.getElementById("frame-granted").src = `${innerOrigin}/fullscreen-inner.html?frame=granted`;
+    document.getElementById("frame-denied").src = `${innerOrigin}/fullscreen-inner.html?frame=denied`;
+
+    // The REAL production URL builder from the built plugin output, exposed
+    // under its source names by the test-provided wrapper module.
+    const { hyperframesStudioUrl, studioHostLabel } = await import("/studio-url.js");
+    window.__panel = {
+      studioUrl: hyperframesStudioUrl(3678, "video", undefined, undefined, undefined, browserHost),
+      ipv6Label: studioHostLabel("2001:db8::60"),
+      localhostUrl: hyperframesStudioUrl(3678),
+      iframeResults: [],
+      ready: true,
+    };
+
+    // Same wiring contract as VideoPanel: state comes from fullscreenchange,
+    // and a rejected request resyncs instead of surfacing an error.
+    const currentFullscreenElement = () => document.fullscreenElement;
+    const sync = () => {
+      const active = currentFullscreenElement() !== null;
+      root.dataset.fullscreen = active ? "true" : "false";
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    };
+    document.addEventListener("fullscreenchange", sync);
+    window.__panel.requestRejected = 0;
+    button.addEventListener("click", () => {
+      const request = currentFullscreenElement() === null
+        ? root.requestFullscreen()
+        : document.exitFullscreen();
+      Promise.resolve(request).catch(() => {
+        window.__panel.requestRejected += 1;
+        sync();
+      });
+    });
+    window.addEventListener("message", (event) => {
+      if (event.origin !== innerOrigin || !event.data || event.data.source !== "fullscreen-inner") return;
+      window.__panel.iframeResults.push(event.data);
+    });
+    window.__panel.sync = sync;
+  </script>
+</body>
+</html>

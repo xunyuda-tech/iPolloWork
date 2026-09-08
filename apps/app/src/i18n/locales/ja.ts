@@ -1154,4 +1154,6 @@ export default {
   "workspace_list.test_connection": "接続テスト",
   "workspace_list.unavailable": "利用不可",
   "workspace_list.workspace_fallback": "ワークスペース",
+  "video.exit_fullscreen": "全画面表示を終了",
+  "video.fullscreen": "動画スタジオを全画面表示",
 } as const;

@@ -36,6 +36,9 @@ if (command === "check") {
 if (command === "preview") {
   const port = Number(rest[rest.indexOf("--port") + 1]);
   const projectDir = resolve(project);
+  if (process.env.DSH_TEST_PREVIEW_ENV_DUMP) {
+    await writeFile(process.env.DSH_TEST_PREVIEW_ENV_DUMP, JSON.stringify({ previewHost: process.env.HYPERFRAMES_PREVIEW_HOST ?? null }));
+  }
   const server = createServer((req, res) => {
     if (req.url === "/__hyperframes_config") {
       res.setHeader("content-type", "application/json");
@@ -209,6 +212,51 @@ test("Harness client validates message source and fills a draft without sending 
   assert.match(source, /event\.source !== iframeRef\.current\?\.contentWindow/);
   assert.match(source, /inputActions\.setDraft/);
   assert.doesNotMatch(source, /inputActions\.(send|submit)|sendMessage\(/);
+});
+
+test("conversation slot is labeled 视频工作台 and its frame allows fullscreen", async () => {
+  const source = await readFile(resolve(dirname(new URL(import.meta.url).pathname), "../src/client.tsx"), "utf8");
+  assert.match(source, /label: "视频工作台"/);
+  assert.doesNotMatch(source, /label: "Video"/);
+  // Modern Permissions Policy plus the legacy attribute older Safari reads.
+  assert.match(source, /allow="fullscreen"/);
+  assert.match(source, /allowFullScreen/);
+});
+
+test("keeps previews on loopback unless the operator opts in via HYPERFRAMES_PREVIEW_HOST", async () => {
+  const { root, cliPath } = await fixture();
+  const dumpPath = resolve(root, "preview-env.json");
+  const manager = new VideoRuntimeManager({ cliPath, idleMs: 40, startTimeoutMs: 4_000 });
+  const hadPreviewHost = "HYPERFRAMES_PREVIEW_HOST" in process.env;
+  const previousPreviewHost = process.env.HYPERFRAMES_PREVIEW_HOST;
+  const previousDump = process.env.DSH_TEST_PREVIEW_ENV_DUMP;
+  process.env.DSH_TEST_PREVIEW_ENV_DUMP = dumpPath;
+  try {
+    delete process.env.HYPERFRAMES_PREVIEW_HOST;
+    await manager.start({ workspaceRoot: root, sessionId: "preview-env-default", viewId: "view" });
+    assert.equal(JSON.parse(await readFile(dumpPath, "utf8")).previewHost, null);
+
+    process.env.HYPERFRAMES_PREVIEW_HOST = "0.0.0.0";
+    await manager.stop({ workspaceRoot: root, sessionId: "preview-env-default" });
+    await manager.start({ workspaceRoot: root, sessionId: "preview-env-optin", viewId: "view" });
+    assert.equal(JSON.parse(await readFile(dumpPath, "utf8")).previewHost, "0.0.0.0");
+  } finally {
+    if (hadPreviewHost) process.env.HYPERFRAMES_PREVIEW_HOST = previousPreviewHost;
+    else delete process.env.HYPERFRAMES_PREVIEW_HOST;
+    if (previousDump === undefined) delete process.env.DSH_TEST_PREVIEW_ENV_DUMP;
+    else process.env.DSH_TEST_PREVIEW_ENV_DUMP = previousDump;
+    manager.dispose();
+  }
+});
+
+test("never widens preview exposure on its own (F-001)", async () => {
+  const testDir = dirname(new URL(import.meta.url).pathname);
+  const indexSource = await readFile(resolve(testDir, "../src/index.ts"), "utf8");
+  // Exposure may only come from the operator's own environment; the plugin
+  // must not re-derive it from how the web server is bound.
+  assert.doesNotMatch(indexSource, /webServer\.host|previewHost/);
+  const runtimeSource = await readFile(resolve(testDir, "../src/runtime.ts"), "utf8");
+  assert.doesNotMatch(runtimeSource, /HYPERFRAMES_PREVIEW_HOST|previewHost/);
 });
 
 test("Studio reuses the iPolloWork VideoPanel without a parallel editor shell", async () => {

@@ -237,28 +237,24 @@ function validationTool(runtime: Runtime, ctx: Context) {
   });
 }
 
-function createRuntime(ctx: Context): Runtime {
-  return {
-    token: randomBytes(32).toString("base64url"),
-    studioRoot: resolve(packageRoot, "studio/dist"),
-    templatesRoot: resolve(packageRoot, "lib/templates"),
-    templatesPromise: null,
-    operations: new Map(),
-    switches: new Map(),
-    // Remote browsers reach previews through the hostname they already used
-    // for the harness page, so a web server exposed on all interfaces needs
-    // previews exposed the same way; every other deployment keeps the CLI's
-    // loopback default (or an explicit HYPERFRAMES_PREVIEW_HOST override).
-    manager: new VideoRuntimeManager({
-      previewHost: ctx.webServer.host === "0.0.0.0" ? "0.0.0.0" : undefined,
-    }),
-  };
-}
+const runtime: Runtime = {
+  token: randomBytes(32).toString("base64url"),
+  studioRoot: resolve(packageRoot, "studio/dist"),
+  templatesRoot: resolve(packageRoot, "lib/templates"),
+  templatesPromise: null,
+  operations: new Map(),
+  switches: new Map(),
+  // Previews keep the HyperFrames CLI's loopback default. The preview API is
+  // unauthenticated (F-001), so LAN exposure must come from the operator alone:
+  // start the harness with HYPERFRAMES_PREVIEW_HOST=<host> to opt in; the env
+  // is inherited by spawned previews and nothing is inferred from how the
+  // harness web server itself is bound.
+  manager: new VideoRuntimeManager(),
+};
 
 export const inject = ["webServer", "workspaceRegistry", "tools"];
 
 export function apply(ctx: Context): void {
-  const runtime = createRuntime(ctx);
   ctx.effect(() => ctx.webServer.register({
     kind: "prefix",
     path: ROUTE_ROOT,

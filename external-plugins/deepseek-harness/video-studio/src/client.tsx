@@ -51,6 +51,7 @@ function VideoView({ sessionId, useWorkspaces, inputActions }: ConvViewProps) {
         src={`/ipollowork-video/studio/?${query.toString()}`}
         style={frameStyle}
         allow="fullscreen"
+        allowFullScreen
         sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
       />
     </section>

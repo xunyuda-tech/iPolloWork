@@ -1155,4 +1155,6 @@ export default {
   "workspace_list.test_connection": "Kiểm tra kết nối",
   "workspace_list.unavailable": "Không khả dụng",
   "workspace_list.workspace_fallback": "Workspace",
+  "video.exit_fullscreen": "Thoát toàn màn hình",
+  "video.fullscreen": "Xem xưởng video toàn màn hình",
 } as const;

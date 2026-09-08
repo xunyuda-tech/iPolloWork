@@ -53,9 +53,9 @@ DeepSeek Harness Web 界面默认运行在 [http://127.0.0.1:3080](http://127.0.
 ### 远端浏览与全屏
 
 - 从其他机器的浏览器打开远端 DSH 时，工作台会自动改用该浏览器访问 DSH 时使用的主机名拼接 HyperFrames 预览地址，不再依赖浏览器本机的 `localhost`。
-- 只有当 DSH Web 服务绑定到所有网卡（`0.0.0.0`）时，插件才会让预览进程同样绑定所有网卡；本地部署保持回环地址不变。
+- HyperFrames 预览服务默认只绑定回环地址（`127.0.0.1`）：预览 API 未做认证（含项目文件读写删除与渲染端点），任何网卡暴露都必须由操作者显式开启。插件不会根据 DSH Web 服务的绑定地址自动推断。远端部署需要让浏览器直接访问预览端口时，请显式设置 HyperFrames CLI 既有的开关启动 DSH，例如：`HYPERFRAMES_PREVIEW_HOST=0.0.0.0 dsh web`（也可指定具体网卡地址）。请仅在受信任网络中开启，并自行配套网络层防护。
 - 工作台右上角提供 **全屏** 按钮：点击进入全屏编辑，再次点击或按 `Esc` 退出并恢复原布局。按钮在加载中和加载失败时都保持可见，且不会遮挡错误信息。
-- 通过 SSH 端口转发只转发 DSH 端口的部署，浏览器无法直接访问预览端口；请为预览端口一并配置转发，或改用可直接访问的主机名。
+- 通过 SSH 端口转发只转发 DSH 端口的部署，浏览器无法直接访问预览端口；请为预览端口一并配置转发，或改用可直接访问的主机名（并按上一条显式开启预览监听）。
 
 ### 本地发布包
 
@@ -135,9 +135,9 @@ The Web UI is served at [http://127.0.0.1:3080](http://127.0.0.1:3080) by defaul
 ### Remote browsers and fullscreen
 
 - When a real browser opens a remote DSH deployment, the workbench builds the HyperFrames preview URL from the hostname that browser already used for DSH, instead of the visitor's own `localhost`.
-- Preview processes bind to all interfaces only when the DSH web server itself binds `0.0.0.0`; loopback deployments stay on loopback.
+- HyperFrames previews bind to loopback (`127.0.0.1`) by default: the preview API is unauthenticated (including project file read/write/delete and render-spawn endpoints), so any interface exposure must be an explicit operator opt-in. The plugin never infers it from how the DSH web server itself is bound. If a remote deployment needs browsers to reach the preview port directly, start DSH with the HyperFrames CLI's own switch, e.g. `HYPERFRAMES_PREVIEW_HOST=0.0.0.0 dsh web` (a specific interface address also works). Only enable this on trusted networks, with your own network-level protection.
 - The workbench offers a **fullscreen** button in its top-right chrome: enter fullscreen editing, then click again or press `Esc` to restore. The button stays visible while loading and after failures, and never covers the error message.
-- Deployments that only forward the DSH port through an SSH tunnel cannot reach the preview port directly; forward the preview port as well, or use a directly reachable hostname.
+- Deployments that only forward the DSH port through an SSH tunnel cannot reach the preview port directly; forward the preview port as well, or use a directly reachable hostname (plus the explicit preview host opt-in above).
 
 ### Local release artifact
 

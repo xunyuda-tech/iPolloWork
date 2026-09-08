@@ -98,16 +98,16 @@ function currentFullscreenElement() {
  * Fullscreen helper covering the standard Fullscreen API plus the Safari
  * webkit fallbacks. The panel root is the fullscreen target, so the studio
  * iframe and every overlay (startup progress, load errors) come along.
+ * Requests can be rejected (user-gesture or permissions-policy denials), so
+ * the caller resyncs button state from the document instead of surfacing an
+ * unhandled rejection.
  */
-function setPanelFullscreen(root: HTMLElement | null, active: boolean) {
+function setPanelFullscreen(root: HTMLElement | null, active: boolean, onRejected?: () => void) {
   if (!root) return;
-  if (active) {
-    const element = root as WebkitFullscreenElement;
-    void (element.requestFullscreen?.() ?? element.webkitRequestFullscreen?.());
-    return;
-  }
-  const documentWithFallback = document as WebkitFullscreenDocument;
-  void (document.exitFullscreen?.() ?? documentWithFallback.webkitExitFullscreen?.());
+  const request = active
+    ? (root as WebkitFullscreenElement).requestFullscreen?.() ?? (root as WebkitFullscreenElement).webkitRequestFullscreen?.()
+    : document.exitFullscreen?.() ?? (document as WebkitFullscreenDocument).webkitExitFullscreen?.();
+  Promise.resolve(request).catch(() => onRejected?.());
 }
 
 function ensureVideoTokenBridge(source: string) {
@@ -855,7 +855,11 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
   }, [expanded, onExpandedChange]);
 
   const toggleStudioFullscreen = React.useCallback(() => {
-    setPanelFullscreen(panelRootRef.current, currentFullscreenElement() === null);
+    setPanelFullscreen(panelRootRef.current, currentFullscreenElement() === null, () => {
+      // A denied request fires no fullscreenchange; resync from the document
+      // so the button reflects reality instead of the failed request.
+      setStudioFullscreen(currentFullscreenElement() !== null);
+    });
   }, []);
 
   React.useEffect(() => {
@@ -884,9 +888,9 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
               variant="secondary"
               size="icon-sm"
               className="shadow-md"
-              aria-label={studioFullscreen ? "退出全屏" : "全屏"}
+              aria-label={studioFullscreen ? t("video.exit_fullscreen") : t("video.fullscreen")}
               aria-pressed={studioFullscreen ? "true" : "false"}
-              title={studioFullscreen ? "退出全屏" : "全屏"}
+              title={studioFullscreen ? t("video.exit_fullscreen") : t("video.fullscreen")}
               data-testid="video-studio-fullscreen"
               onClick={toggleStudioFullscreen}
             >

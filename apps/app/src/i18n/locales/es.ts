@@ -1195,4 +1195,6 @@ export default {
   "workspace_list.test_connection": "Probar conexión",
   "workspace_list.unavailable": "No disponible",
   "workspace_list.workspace_fallback": "workspace",
+  "video.exit_fullscreen": "Salir de la pantalla completa",
+  "video.fullscreen": "Estudio de vídeo en pantalla completa",
 } as const;

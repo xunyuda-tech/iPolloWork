@@ -1155,4 +1155,6 @@ export default {
   "workspace_list.test_connection": "ทดสอบการเชื่อมต่อ",
   "workspace_list.unavailable": "ไม่พร้อมใช้งาน",
   "workspace_list.workspace_fallback": "พื้นที่ทำงาน",
+  "video.exit_fullscreen": "ออกจากโหมดเต็มหน้าจอ",
+  "video.fullscreen": "แสดงสตูดิโอวิดีโอแบบเต็มหน้าจอ",
 } as const;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import {
   hyperframesStudioPort,
@@ -1006,9 +1006,24 @@ describe("HyperFrames Video Studio", () => {
       "utf8",
     );
     expect(panelSource).toContain('data-testid="video-studio-fullscreen"');
-    expect(panelSource).toContain('aria-label={studioFullscreen ? "退出全屏" : "全屏"}');
+    expect(panelSource).toContain('aria-label={studioFullscreen ? t("video.exit_fullscreen") : t("video.fullscreen")}');
     expect(panelSource).toContain('allow="fullscreen" allowFullScreen');
     expect(panelSource).toContain('data-testid="video-studio-chrome"');
+  });
+
+  test("localizes the fullscreen labels in every locale instead of hardcoding them", () => {
+    const panelSource = readFileSync(
+      new URL("../src/react-app/domains/session/video/video-panel.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(panelSource).not.toContain('"退出全屏"');
+    expect(panelSource).not.toContain('"全屏"');
+    const localesDir = new URL("../src/i18n/locales/", import.meta.url);
+    for (const localeFile of readdirSync(localesDir)) {
+      const localeSource = readFileSync(new URL(localeFile, localesDir), "utf8");
+      expect(localeSource, `${localeFile} must translate both fullscreen keys`).toContain('"video.fullscreen"');
+      expect(localeSource, `${localeFile} must translate both fullscreen keys`).toContain('"video.exit_fullscreen"');
+    }
   });
 
   test("cache-busts the Studio document when its iframe revision changes", () => {
