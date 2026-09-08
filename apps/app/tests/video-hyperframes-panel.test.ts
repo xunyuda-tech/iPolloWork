@@ -993,6 +993,24 @@ describe("HyperFrames Video Studio", () => {
     expect(hyperframesStudioUrl(3002, "video", "zh")).toBe("http://localhost:3002/#project/video?v=1&t=0&tab=design&rc=1&tv=1&locale=zh");
   });
 
+  test("uses the browser-visible host for a remote Studio preview", () => {
+    expect(hyperframesStudioUrl(3678, "video", "zh", "dark", 4, "192.168.0.60")).toBe(
+      "http://192.168.0.60:3678/?ipwReload=4#project/video?v=1&t=0&tab=design&rc=1&tv=1&locale=zh&ipolloworkTheme=dark",
+    );
+    expect(hyperframesStudioUrl(3678, "video", undefined, undefined, undefined, "2001:db8::60")).toContain("http://[2001:db8::60]:3678/");
+  });
+
+  test("exposes the workbench fullscreen control without obscuring the Studio frame", () => {
+    const panelSource = readFileSync(
+      new URL("../src/react-app/domains/session/video/video-panel.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(panelSource).toContain('data-testid="video-studio-fullscreen"');
+    expect(panelSource).toContain('aria-label={studioFullscreen ? "退出全屏" : "全屏"}');
+    expect(panelSource).toContain('allow="fullscreen" allowFullScreen');
+    expect(panelSource).toContain('data-testid="video-studio-chrome"');
+  });
+
   test("cache-busts the Studio document when its iframe revision changes", () => {
     expect(hyperframesStudioUrl(3002, "video", "zh", "light", 3)).toBe(
       "http://localhost:3002/?ipwReload=3#project/video?v=1&t=0&tab=design&rc=1&tv=1&locale=zh&ipolloworkTheme=light",

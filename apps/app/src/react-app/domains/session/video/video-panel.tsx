@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Maximize2, Minimize2 } from "lucide-react";
 
 import type { HyperframesCatalogItem, iPolloWorkServerClient } from "@/app/lib/ipollowork-server";
 import { pickLocalImageFile, readLocalImageAsDataUrl } from "@/app/lib/desktop";
@@ -81,6 +81,35 @@ const MIN_STUDIO_PANEL_WIDTH = 160;
 const MAX_STUDIO_PANEL_WIDTH = 600;
 const RUNTIME_THEME_BRIDGE_PATTERN = /\/\*\s*ipw-runtime-theme-bridge:start\s*\*\/[\s\S]*?\/\*\s*ipw-runtime-theme-bridge:end\s*\*\//i;
 
+type WebkitFullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+};
+type WebkitFullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+};
+
+function currentFullscreenElement() {
+  const documentWithFallback = document as WebkitFullscreenDocument;
+  return document.fullscreenElement ?? documentWithFallback.webkitFullscreenElement ?? null;
+}
+
+/**
+ * Fullscreen helper covering the standard Fullscreen API plus the Safari
+ * webkit fallbacks. The panel root is the fullscreen target, so the studio
+ * iframe and every overlay (startup progress, load errors) come along.
+ */
+function setPanelFullscreen(root: HTMLElement | null, active: boolean) {
+  if (!root) return;
+  if (active) {
+    const element = root as WebkitFullscreenElement;
+    void (element.requestFullscreen?.() ?? element.webkitRequestFullscreen?.());
+    return;
+  }
+  const documentWithFallback = document as WebkitFullscreenDocument;
+  void (document.exitFullscreen?.() ?? documentWithFallback.webkitExitFullscreen?.());
+}
+
 function ensureVideoTokenBridge(source: string) {
   const bridge = buildStableTokenBridgeCss();
   if (RUNTIME_THEME_BRIDGE_PATTERN.test(source)) return source.replace(RUNTIME_THEME_BRIDGE_PATTERN, bridge);
@@ -96,6 +125,7 @@ function isIPolloWorkServerClient(client: VideoStudioClient | null): client is i
 }
 
 export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceId, runtime, features = IPOLLOWORK_VIDEO_STUDIO_FEATURES, branding, isRemoteWorkspace = false, aiEditing = false, expanded = false, onExpandedChange, onAskAi, onSaveAsTemplate }: VideoPanelProps) {
+  const panelRootRef = React.useRef<HTMLDivElement | null>(null);
   const studioFrameRef = React.useRef<HTMLIFrameElement | null>(null);
   const studioChromeReadyRef = React.useRef(false);
   const studioReadyFallbackRef = React.useRef<number | null>(null);
@@ -119,6 +149,8 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
   const designTokenSaveTimerRef = React.useRef<number | null>(null);
   const studioPort = hyperframesStudioPort(sessionId);
   const [activeStudioPort, setActiveStudioPort] = React.useState(studioPort);
+  const [activeStudioHost, setActiveStudioHost] = React.useState("localhost");
+  const [studioFullscreen, setStudioFullscreen] = React.useState(false);
   const resolvedTheme = React.useSyncExternalStore(
     subscribeToTheme,
     getResolvedThemeMode,
@@ -131,6 +163,7 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
     currentLocale(),
     initialStudioThemeRef.current,
     revision,
+    activeStudioHost,
   );
   const projectDirectory = videoProjectDirectory(sessionId);
   const compositionPath = `${projectDirectory}/index.html`;
@@ -695,6 +728,7 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
     studioChromeReadyRef.current = false;
     setStudioChromeReady(false);
     setActiveStudioPort(studioPort);
+    setActiveStudioHost("localhost");
     if (isRemoteWorkspace) {
       setStatus("failed");
       setDetail(t("video.local_workspaces"));
@@ -731,6 +765,12 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
       if (!result?.ok) throw new Error(t("video.could_not_start"));
       if (typeof result.port === "number" && Number.isInteger(result.port) && result.port > 0) {
         setActiveStudioPort(result.port);
+      }
+      // A host-side Studio address (the hostname the browser already used to
+      // reach this embedding page) keeps remote sessions off the visitor's
+      // own localhost; the desktop runtime reports none and stays on loopback.
+      if (typeof result.host === "string" && result.host.trim()) {
+        setActiveStudioHost(result.host.trim());
       }
       setStatus("ready");
       setStartupStage("loading-frame");
@@ -814,8 +854,22 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [expanded, onExpandedChange]);
 
+  const toggleStudioFullscreen = React.useCallback(() => {
+    setPanelFullscreen(panelRootRef.current, currentFullscreenElement() === null);
+  }, []);
+
+  React.useEffect(() => {
+    const syncStudioFullscreen = () => setStudioFullscreen(currentFullscreenElement() !== null);
+    document.addEventListener("fullscreenchange", syncStudioFullscreen);
+    document.addEventListener("webkitfullscreenchange", syncStudioFullscreen);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncStudioFullscreen);
+      document.removeEventListener("webkitfullscreenchange", syncStudioFullscreen);
+    };
+  }, []);
+
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-background" data-testid="video-panel" data-expanded={expanded ? "true" : "false"}>
+    <div ref={panelRootRef} className="relative flex h-full min-h-0 flex-col bg-background" data-testid="video-panel" data-expanded={expanded ? "true" : "false"} data-fullscreen={studioFullscreen ? "true" : "false"}>
       {!isRemoteWorkspace && status === "ready" && workspaceId && isIPolloWorkServerClient(client) ? (
         <VideoImageWorkbench client={client} workspaceId={workspaceId} workspaceRoot={workspaceRoot} sessionId={sessionId}
           studioUrl={studioUrl} studioFrameRef={studioFrameRef} />
@@ -823,7 +877,22 @@ export function VideoPanel({ title, sessionId, workspaceRoot, client, workspaceI
       {isRemoteWorkspace ? (
         <div className="grid flex-1 place-items-center p-8 text-center text-sm text-muted-foreground">{t("video.local_only")}</div>
       ) : (
-        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-[#0c0c0d]">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0c0c0d]">
+          <div className="flex h-9 shrink-0 items-center justify-end px-2" data-testid="video-studio-chrome">
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon-sm"
+              className="shadow-md"
+              aria-label={studioFullscreen ? "退出全屏" : "全屏"}
+              aria-pressed={studioFullscreen ? "true" : "false"}
+              title={studioFullscreen ? "退出全屏" : "全屏"}
+              data-testid="video-studio-fullscreen"
+              onClick={toggleStudioFullscreen}
+            >
+              {studioFullscreen ? <Minimize2 className="size-4" aria-hidden="true" /> : <Maximize2 className="size-4" aria-hidden="true" />}
+            </Button>
+          </div>
           <div className="relative min-w-0 flex-1">
           {showStudioStartupOverlay ? (
             <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-background/80 backdrop-blur-sm" aria-live="polite">

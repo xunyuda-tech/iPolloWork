@@ -44,6 +44,17 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json();
 }
 
+/**
+ * The HyperFrames preview listens on the same machine as this Studio page, so
+ * the hostname the browser already used to reach the page is also the hostname
+ * that reaches the preview. Returning it keeps remote DSH sessions off the
+ * visitor's own `localhost`; loopback visitors still resolve to loopback.
+ */
+function browserVisibleStudioHost() {
+  const host = window.location.hostname.trim();
+  return host ? { host } : {};
+}
+
 export function createDeepSeekVideoStudioHost(scope: {
   workspaceId: string;
   sessionId: string;
@@ -72,7 +83,7 @@ export function createDeepSeekVideoStudioHost(scope: {
   const runtime: VideoStudioRuntime = {
     start: async () => {
       const active = await session();
-      return { ok: true, port: active.port, reused: active.reused };
+      return { ok: true, port: active.port, reused: active.reused, ...browserVisibleStudioHost() };
     },
     stop: async () => {
       await api("/release", {

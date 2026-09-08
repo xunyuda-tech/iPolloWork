@@ -50,6 +50,7 @@ function VideoView({ sessionId, useWorkspaces, inputActions }: ConvViewProps) {
         title="iVideo by iPolloWork"
         src={`/ipollowork-video/studio/?${query.toString()}`}
         style={frameStyle}
+        allow="fullscreen"
         sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
       />
     </section>
@@ -61,7 +62,7 @@ export function apply(ctx: Context): void {
     name: "conversation.view",
     id: "ipollowork-video-studio",
     order: 22,
-    label: "Video",
+    label: "视频工作台",
   }, VideoView));
 }
 

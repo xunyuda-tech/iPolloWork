@@ -67,6 +67,14 @@ export type VideoRuntimeManagerOptions = {
   cliPath?: string;
   idleMs?: number;
   startTimeoutMs?: number;
+  /**
+   * Bind host passed to spawned HyperFrames previews via
+   * `HYPERFRAMES_PREVIEW_HOST`. The CLI keeps previews on loopback unless this
+   * is set; hosts that expose the harness web server on all interfaces mirror
+   * that exposure so remote browsers can reach the preview port on the same
+   * hostname they already used for the harness itself.
+   */
+  previewHost?: string;
 };
 
 function appendBounded(current: string, chunk: string) {
@@ -149,6 +157,7 @@ export class VideoRuntimeManager {
   private readonly ownerGuardPath: string;
   private readonly idleMs: number;
   private readonly startTimeoutMs: number;
+  private readonly previewHost: string | undefined;
   private readonly previews = new Map<string, ManagedPreview>();
   private readonly starts = new Map<string, Promise<VideoStudioRuntimeSession>>();
 
@@ -157,6 +166,7 @@ export class VideoRuntimeManager {
     this.ownerGuardPath = fileURLToPath(new URL("./preview-owner-guard.js", import.meta.url));
     this.idleMs = options.idleMs ?? DEFAULT_IDLE_MS;
     this.startTimeoutMs = options.startTimeoutMs ?? DEFAULT_START_TIMEOUT_MS;
+    this.previewHost = options.previewHost?.trim() || undefined;
   }
 
   activePreviewCount() {
@@ -347,6 +357,7 @@ export class VideoRuntimeManager {
         PATH: inheritedPath(),
         BROWSER: "none",
         NO_COLOR: "1",
+        ...(ownsPreview && this.previewHost ? { HYPERFRAMES_PREVIEW_HOST: this.previewHost } : {}),
         HYPERFRAMES_SKIP_SKILLS: args[0] === "init" ? "1" : process.env.HYPERFRAMES_SKIP_SKILLS,
       },
     }) as ManagedChild;

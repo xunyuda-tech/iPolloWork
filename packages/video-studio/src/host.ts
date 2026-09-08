@@ -30,7 +30,7 @@ export interface VideoStudioRuntime {
     sessionId: string;
     projectDirectory: string;
     port: number;
-  }): Promise<{ ok: boolean; port?: number; reused?: boolean }>;
+  }): Promise<{ ok: boolean; port?: number; reused?: boolean; host?: string }>;
   stop(sessionId: string, options?: { keepWarm?: boolean }): Promise<{ ok: boolean }>;
 }
 

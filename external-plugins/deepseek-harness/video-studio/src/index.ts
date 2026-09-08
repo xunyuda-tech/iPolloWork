@@ -237,19 +237,28 @@ function validationTool(runtime: Runtime, ctx: Context) {
   });
 }
 
-const runtime: Runtime = {
-  token: randomBytes(32).toString("base64url"),
-  studioRoot: resolve(packageRoot, "studio/dist"),
-  templatesRoot: resolve(packageRoot, "lib/templates"),
-  templatesPromise: null,
-  operations: new Map(),
-  switches: new Map(),
-  manager: new VideoRuntimeManager(),
-};
+function createRuntime(ctx: Context): Runtime {
+  return {
+    token: randomBytes(32).toString("base64url"),
+    studioRoot: resolve(packageRoot, "studio/dist"),
+    templatesRoot: resolve(packageRoot, "lib/templates"),
+    templatesPromise: null,
+    operations: new Map(),
+    switches: new Map(),
+    // Remote browsers reach previews through the hostname they already used
+    // for the harness page, so a web server exposed on all interfaces needs
+    // previews exposed the same way; every other deployment keeps the CLI's
+    // loopback default (or an explicit HYPERFRAMES_PREVIEW_HOST override).
+    manager: new VideoRuntimeManager({
+      previewHost: ctx.webServer.host === "0.0.0.0" ? "0.0.0.0" : undefined,
+    }),
+  };
+}
 
 export const inject = ["webServer", "workspaceRegistry", "tools"];
 
 export function apply(ctx: Context): void {
+  const runtime = createRuntime(ctx);
   ctx.effect(() => ctx.webServer.register({
     kind: "prefix",
     path: ROUTE_ROOT,
