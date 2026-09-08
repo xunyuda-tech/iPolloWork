@@ -244,6 +244,11 @@ const runtime: Runtime = {
   templatesPromise: null,
   operations: new Map(),
   switches: new Map(),
+  // Previews keep the HyperFrames CLI's loopback default. The preview API is
+  // unauthenticated (F-001), so LAN exposure must come from the operator alone:
+  // start the harness with HYPERFRAMES_PREVIEW_HOST=<host> to opt in; the env
+  // is inherited by spawned previews and nothing is inferred from how the
+  // harness web server itself is bound.
   manager: new VideoRuntimeManager(),
 };
 

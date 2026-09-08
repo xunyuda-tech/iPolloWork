@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import {
   hyperframesStudioPort,
@@ -991,6 +991,39 @@ describe("HyperFrames Video Studio", () => {
 
   test("passes the app locale through the Studio hash route", () => {
     expect(hyperframesStudioUrl(3002, "video", "zh")).toBe("http://localhost:3002/#project/video?v=1&t=0&tab=design&rc=1&tv=1&locale=zh");
+  });
+
+  test("uses the browser-visible host for a remote Studio preview", () => {
+    expect(hyperframesStudioUrl(3678, "video", "zh", "dark", 4, "192.168.0.60")).toBe(
+      "http://192.168.0.60:3678/?ipwReload=4#project/video?v=1&t=0&tab=design&rc=1&tv=1&locale=zh&ipolloworkTheme=dark",
+    );
+    expect(hyperframesStudioUrl(3678, "video", undefined, undefined, undefined, "2001:db8::60")).toContain("http://[2001:db8::60]:3678/");
+  });
+
+  test("exposes the workbench fullscreen control without obscuring the Studio frame", () => {
+    const panelSource = readFileSync(
+      new URL("../src/react-app/domains/session/video/video-panel.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(panelSource).toContain('data-testid="video-studio-fullscreen"');
+    expect(panelSource).toContain('aria-label={studioFullscreen ? t("video.exit_fullscreen") : t("video.fullscreen")}');
+    expect(panelSource).toContain('allow="fullscreen" allowFullScreen');
+    expect(panelSource).toContain('data-testid="video-studio-chrome"');
+  });
+
+  test("localizes the fullscreen labels in every locale instead of hardcoding them", () => {
+    const panelSource = readFileSync(
+      new URL("../src/react-app/domains/session/video/video-panel.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(panelSource).not.toContain('"退出全屏"');
+    expect(panelSource).not.toContain('"全屏"');
+    const localesDir = new URL("../src/i18n/locales/", import.meta.url);
+    for (const localeFile of readdirSync(localesDir)) {
+      const localeSource = readFileSync(new URL(localeFile, localesDir), "utf8");
+      expect(localeSource, `${localeFile} must translate both fullscreen keys`).toContain('"video.fullscreen"');
+      expect(localeSource, `${localeFile} must translate both fullscreen keys`).toContain('"video.exit_fullscreen"');
+    }
   });
 
   test("cache-busts the Studio document when its iframe revision changes", () => {

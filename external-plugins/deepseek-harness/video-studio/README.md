@@ -12,13 +12,13 @@
 
 ## 让 DeepSeek Harness 真正拥有视频创作能力
 
-`deepseek-ivideo` 将 iPolloWork 的同一个 Video Studio 作为原生 **Video** 视图加入 DeepSeek Harness。它直接复用 iPolloWork 的 `VideoPanel` 和定制 HyperFrames 时间线、可视化编辑器、动画系统、预览及视频导出能力，不维护第二套编辑器、顶部栏或渲染链路。
+`deepseek-ivideo` 将 iPolloWork 的同一个 Video Studio 作为原生 **视频工作台** 视图加入 DeepSeek Harness。它直接复用 iPolloWork 的 `VideoPanel` 和定制 HyperFrames 时间线、可视化编辑器、动画系统、预览及视频导出能力，不维护第二套编辑器、顶部栏或渲染链路。
 
 你可以让 Harness 从对话生成或修改整段视频，也可以在画面中选中标题、图片、素材或其他元素，通过 **Ask AI** 只修改当前对象。所有操作仍落在当前工作区的真实 HTML、CSS、素材和项目文件中，可继续手动精调、预览和导出。
 
 ### 核心能力
 
-- DeepSeek Harness 对话中的原生 **Video** 视图
+- DeepSeek Harness 对话中的原生 **视频工作台** 视图
 - HyperFrames 时间线、可视化编辑、动画、素材和实时预览
 - 28 个内置可编辑 Video 模板
 - 跟随主题的可复用组件库，可从 Studio 直接加入时间线
@@ -48,7 +48,14 @@ dsh plugin --profile web add deepseek-ivideo
 dsh web
 ```
 
-DeepSeek Harness Web 界面默认运行在 [http://127.0.0.1:3080](http://127.0.0.1:3080)。打开对话后选择 **Video** 即可进入 Studio。
+DeepSeek Harness Web 界面默认运行在 [http://127.0.0.1:3080](http://127.0.0.1:3080)。打开对话后选择 **视频工作台** 即可进入 Studio。
+
+### 远端浏览与全屏
+
+- 从其他机器的浏览器打开远端 DSH 时，工作台会自动改用该浏览器访问 DSH 时使用的主机名拼接 HyperFrames 预览地址，不再依赖浏览器本机的 `localhost`。
+- HyperFrames 预览服务默认只绑定回环地址（`127.0.0.1`）：预览 API 未做认证（含项目文件读写删除与渲染端点），任何网卡暴露都必须由操作者显式开启。插件不会根据 DSH Web 服务的绑定地址自动推断。远端部署需要让浏览器直接访问预览端口时，请显式设置 HyperFrames CLI 既有的开关启动 DSH，例如：`HYPERFRAMES_PREVIEW_HOST=0.0.0.0 dsh web`（也可指定具体网卡地址）。请仅在受信任网络中开启，并自行配套网络层防护。
+- 工作台右上角提供 **全屏** 按钮：点击进入全屏编辑，再次点击或按 `Esc` 退出并恢复原布局。按钮在加载中和加载失败时都保持可见，且不会遮挡错误信息。
+- 通过 SSH 端口转发只转发 DSH 端口的部署，浏览器无法直接访问预览端口；请为预览端口一并配置转发，或改用可直接访问的主机名（并按上一条显式开启预览监听）。
 
 ### 本地发布包
 
@@ -61,7 +68,7 @@ dsh web
 ## 使用方式
 
 1. 在项目目录中启动 DeepSeek Harness。
-2. 创建对话并打开 **Video** 视图。
+2. 创建对话并打开 **视频工作台** 视图。
 3. 点击顶部 **模板** 选择一个视频模板，或从空白项目开始。
 4. 在对话中让 AI 生成或修改视频；也可以选中画面元素后点击 **Ask AI**。
 5. 在时间线中预览并精调，最后使用 HyperFrames 原生导出功能生成视频。
@@ -87,13 +94,13 @@ dsh web
 
 ## Give DeepSeek Harness a native video capability
 
-`deepseek-ivideo` adds the same Video Studio used by iPolloWork to DeepSeek Harness as a native **Video** conversation view. It directly reuses iPolloWork's `VideoPanel` and customized HyperFrames timeline, visual editor, animation system, preview, and export pipeline—there is no second editor, top bar, or renderer to maintain.
+`deepseek-ivideo` adds the same Video Studio used by iPolloWork to DeepSeek Harness as a native **视频工作台 (Video Workbench)** conversation view. It directly reuses iPolloWork's `VideoPanel` and customized HyperFrames timeline, visual editor, animation system, preview, and export pipeline—there is no second editor, top bar, or renderer to maintain.
 
 Ask Harness to generate or revise the whole video, or select a heading, image, media item, or other visual element and use **Ask AI** for a focused change. The result remains real HTML, CSS, assets, and project files inside the active workspace, ready for visual refinement, preview, and export.
 
 ### Highlights
 
-- Native **Video** view in DeepSeek Harness conversations
+- Native **视频工作台 (Video Workbench)** view in DeepSeek Harness conversations
 - HyperFrames timeline, direct manipulation, animation, media, and preview
 - 28 bundled editable Video templates
 - Theme-aware reusable components that can be added directly to the timeline
@@ -123,7 +130,14 @@ dsh plugin --profile web add deepseek-ivideo
 dsh web
 ```
 
-The Web UI is served at [http://127.0.0.1:3080](http://127.0.0.1:3080) by default. Open a conversation and choose **Video**.
+The Web UI is served at [http://127.0.0.1:3080](http://127.0.0.1:3080) by default. Open a conversation and choose **视频工作台**.
+
+### Remote browsers and fullscreen
+
+- When a real browser opens a remote DSH deployment, the workbench builds the HyperFrames preview URL from the hostname that browser already used for DSH, instead of the visitor's own `localhost`.
+- HyperFrames previews bind to loopback (`127.0.0.1`) by default: the preview API is unauthenticated (including project file read/write/delete and render-spawn endpoints), so any interface exposure must be an explicit operator opt-in. The plugin never infers it from how the DSH web server itself is bound. If a remote deployment needs browsers to reach the preview port directly, start DSH with the HyperFrames CLI's own switch, e.g. `HYPERFRAMES_PREVIEW_HOST=0.0.0.0 dsh web` (a specific interface address also works). Only enable this on trusted networks, with your own network-level protection.
+- The workbench offers a **fullscreen** button in its top-right chrome: enter fullscreen editing, then click again or press `Esc` to restore. The button stays visible while loading and after failures, and never covers the error message.
+- Deployments that only forward the DSH port through an SSH tunnel cannot reach the preview port directly; forward the preview port as well, or use a directly reachable hostname (plus the explicit preview host opt-in above).
 
 ### Local release artifact
 
@@ -136,7 +150,7 @@ dsh web
 ## Workflow
 
 1. Start DeepSeek Harness from the directory you want to use as the workspace.
-2. Create a conversation and open the **Video** view.
+2. Create a conversation and open the **视频工作台** view.
 3. Choose a template from the top bar, or start with the blank project.
 4. Generate or revise through conversation; select an element and use **Ask AI** for a focused edit.
 5. Preview and refine on the timeline, then export through HyperFrames.

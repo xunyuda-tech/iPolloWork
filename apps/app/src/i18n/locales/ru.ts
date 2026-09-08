@@ -1291,4 +1291,6 @@ export default {
   "extensions.plugins_opencode_header": "Плагины (OpenCode)",
   "extensions.subtitle": "Приложения и пакеты плагинов собраны в одном месте.",
   "extensions.title": "Расширения",
+  "video.exit_fullscreen": "Выйти из полноэкранного режима",
+  "video.fullscreen": "Видеостудия во весь экран",
 } as const;
